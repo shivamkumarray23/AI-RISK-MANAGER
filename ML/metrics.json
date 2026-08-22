@@ -1,0 +1,170 @@
+{
+  "model_name": "LogisticRegression",
+  "random_seed": 42,
+  "data_split": {
+    "train_rows": 3600,
+    "validation_rows": 1200,
+    "test_rows": 1200,
+    "train_positive_rate": 0.08555555555555555,
+    "validation_positive_rate": 0.08583333333333333,
+    "test_positive_rate": 0.08583333333333333
+  },
+  "validation_metrics": {
+    "logistic_regression": {
+      "precision": 0.1792717086834734,
+      "recall": 0.6213592233009708,
+      "f1": 0.2782608695652174,
+      "accuracy": 0.7233333333333334,
+      "roc_auc": 0.7616535830287369
+    },
+    "random_forest": {
+      "precision": 0.07692307692307693,
+      "recall": 0.009708737864077669,
+      "f1": 0.017241379310344827,
+      "accuracy": 0.905,
+      "roc_auc": 0.737333061925286
+    }
+  },
+  "held_out_test_performance_default_threshold_0.5": {
+    "precision": 0.1850828729281768,
+    "recall": 0.6504854368932039,
+    "f1": 0.28817204301075267,
+    "accuracy": 0.7241666666666666,
+    "roc_auc": 0.7590781566673451,
+    "confusion_matrix": {
+      "tn": 802,
+      "fp": 295,
+      "fn": 36,
+      "tp": 67
+    },
+    "false_positive_rate": 0.2689152233363719,
+    "false_negative_rate": 0.34951456310679613
+  },
+  "threshold_analysis_on_validation": [
+    {
+      "threshold": 0.3,
+      "precision": 0.12643678160919541,
+      "recall": 0.9611650485436893,
+      "f1": 0.2234762979683973,
+      "false_positives": 684,
+      "false_negatives": 4,
+      "fp_cost": 102600,
+      "fn_cost": 4800,
+      "total_cost": 107400
+    },
+    {
+      "threshold": 0.4,
+      "precision": 0.16847826086956522,
+      "recall": 0.9029126213592233,
+      "f1": 0.28396946564885495,
+      "false_positives": 459,
+      "false_negatives": 10,
+      "fp_cost": 68850,
+      "fn_cost": 12000,
+      "total_cost": 80850
+    },
+    {
+      "threshold": 0.5,
+      "precision": 0.20652173913043478,
+      "recall": 0.7378640776699029,
+      "f1": 0.3227176220806794,
+      "false_positives": 292,
+      "false_negatives": 27,
+      "fp_cost": 43800,
+      "fn_cost": 32400,
+      "total_cost": 76200
+    },
+    {
+      "threshold": 0.6,
+      "precision": 0.22522522522522523,
+      "recall": 0.4854368932038835,
+      "f1": 0.3076923076923077,
+      "false_positives": 172,
+      "false_negatives": 53,
+      "fp_cost": 25800,
+      "fn_cost": 63600,
+      "total_cost": 89400
+    },
+    {
+      "threshold": 0.7,
+      "precision": 0.2595419847328244,
+      "recall": 0.3300970873786408,
+      "f1": 0.2905982905982906,
+      "false_positives": 97,
+      "false_negatives": 69,
+      "fp_cost": 14550,
+      "fn_cost": 82800,
+      "total_cost": 97350
+    }
+  ],
+  "chosen_threshold": 0.5,
+  "held_out_test_performance_chosen_threshold": {
+    "threshold": 0.5,
+    "precision": 0.1850828729281768,
+    "recall": 0.6504854368932039,
+    "f1": 0.28817204301075267,
+    "accuracy": 0.7241666666666666,
+    "confusion_matrix": {
+      "tn": 802,
+      "fp": 295,
+      "fn": 36,
+      "tp": 67
+    },
+    "false_positive_rate": 0.2689152233363719,
+    "false_negative_rate": 0.34951456310679613,
+    "fp_cost": 44250,
+    "fn_cost": 43200,
+    "total_cost": 87450
+  },
+  "financial_model": {
+    "fp_cost_per_case_inr": 150,
+    "fn_cost_per_case_inr": 1200,
+    "without_model_total_cost_inr": 123600,
+    "with_model_total_cost_inr": 87450,
+    "estimated_loss_prevented_inr": 36150,
+    "note": "Estimates are derived entirely from the synthetic held-out test set and assumed per-case costs. They are illustrative for the hackathon demo and do NOT represent real-world financial savings."
+  },
+  "feature_importance": {
+    "customer_risk_history_low": 0.6002858377758811,
+    "customer_risk_history_high": 0.582188411996933,
+    "return_rate": 0.4549024045544059,
+    "device_change_count": 0.28428642745837346,
+    "location_risk_score": 0.271867617499853,
+    "product_category_Electronics": 0.2325545873387128,
+    "product_category_Grocery": 0.2255462055926724,
+    "product_category_Beauty": 0.2247960849495991,
+    "payment_method_Debit Card": 0.1838204715730302,
+    "coupon_usage_count": 0.17701431383196733,
+    "recent_return_intensity": 0.1743668746980894,
+    "returns_last_30_days": 0.15118499737401958,
+    "payment_method_UPI": 0.13727075492763136,
+    "orders_last_30_days": 0.13554865523255963,
+    "payment_method_Wallet": 0.13518160776844193,
+    "payment_method_COD": 0.1268569993400022,
+    "product_category_Toys": 0.12366735105498361,
+    "refunds_last_90_days": 0.11883151271327559,
+    "product_category_Sports": 0.11678120195866373,
+    "payment_method_Credit Card": 0.1074214013636235,
+    "order_velocity_risk": 0.10682283877325663,
+    "product_category_Fashion": 0.10385504565903969,
+    "discount_value": 0.08791364259381491,
+    "previous_returns": 0.06777179028247078,
+    "customer_risk_history_medium": 0.05369350620346849,
+    "order_amount": 0.05175879500191154,
+    "discount_percent": 0.047337736508213886,
+    "new_account_high_value": 0.04401836332944945,
+    "high_value_order": 0.0423269780452513,
+    "previous_fraud_flag": 0.041531397129356835,
+    "product_category_Home": 0.03569463563367331,
+    "product_category_Mobile": 0.030519454706864728,
+    "risk_flag_sum": 0.029308174582671605,
+    "previous_orders": 0.028654730887920234,
+    "product_category_Books": 0.025818379633185444,
+    "customer_age": 0.024173947429194168,
+    "product_category_Footwear": 0.020582041950043505,
+    "payment_method_Net Banking": 0.016950995865264152,
+    "delivery_distance_km": 0.006589246302000574,
+    "chargebacks_last_90_days": 0.0028557690192472954,
+    "customer_account_age_days": 0.00284629224809403
+  }
+}

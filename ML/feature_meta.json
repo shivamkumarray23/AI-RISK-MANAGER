@@ -1,0 +1,29 @@
+{
+  "feature_columns": [
+    "order_amount",
+    "discount_percent",
+    "delivery_distance_km",
+    "customer_age",
+    "customer_account_age_days",
+    "previous_orders",
+    "previous_returns",
+    "return_rate",
+    "returns_last_30_days",
+    "refunds_last_90_days",
+    "chargebacks_last_90_days",
+    "coupon_usage_count",
+    "high_value_order",
+    "location_risk_score",
+    "device_change_count",
+    "orders_last_30_days",
+    "previous_fraud_flag",
+    "product_category",
+    "payment_method",
+    "customer_risk_history"
+  ],
+  "post_return_fields_excluded": [
+    "days_to_return",
+    "delivery_to_return_days",
+    "return_reason"
+  ]
+}
