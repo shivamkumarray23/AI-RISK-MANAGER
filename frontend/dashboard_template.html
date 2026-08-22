@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Return Risk Manager — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #131722; --panel2: #171c29; --border: #232838;
+    --text: #e6e9f0; --muted: #8b93a7; --accent: #5b8def; --low: #34c759;
+    --medium: #f5a623; --high: #ff4d4f; --good: #34c759; --bad: #ff4d4f;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  header { padding:20px 28px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  header h1 { font-size:18px; margin:0; }
+  header .badge { background:#1c2333; border:1px solid var(--border); color:var(--muted); padding:4px 10px; border-radius:20px; font-size:12px; }
+  .tabs { display:flex; gap:4px; padding:0 28px; border-bottom:1px solid var(--border); background:var(--panel); }
+  .tab { padding:12px 16px; cursor:pointer; color:var(--muted); font-size:14px; border-bottom:2px solid transparent; }
+  .tab.active { color:var(--text); border-bottom:2px solid var(--accent); }
+  .content { padding:24px 28px; max-width:1400px; margin:0 auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:14px; margin-bottom:22px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .card .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+  .card .value { font-size:26px; font-weight:600; }
+  .card .sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .panel-title { font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:26px 0 12px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  canvas { max-height:280px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; }
+  th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; }
+  tr:hover { background:var(--panel2); cursor:pointer; }
+  .pill { padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+  .pill.LOW { background:rgba(52,199,89,.15); color:var(--low); }
+  .pill.MEDIUM { background:rgba(245,166,35,.15); color:var(--medium); }
+  .pill.HIGH { background:rgba(255,77,79,.15); color:var(--high); }
+  .filters { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  select, input { background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:7px 10px; font-size:13px; }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:50; }
+  .modal { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px; width:480px; max-width:90vw; }
+  .modal h3 { margin-top:0; }
+  .modal ul { padding-left:18px; color:var(--muted); font-size:13px; line-height:1.7; }
+  .close-btn { float:right; cursor:pointer; color:var(--muted); }
+  .cm-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; max-width:420px; }
+  .cm-cell { padding:18px; border-radius:8px; text-align:center; }
+  .cm-cell .n { font-size:26px; font-weight:700; }
+  .cm-cell .l { font-size:11px; color:var(--muted); text-transform:uppercase; margin-top:4px; }
+  .tp{background:rgba(52,199,89,.15);} .tn{background:rgba(52,199,89,.08);}
+  .fp{background:rgba(255,77,79,.15);} .fn{background:rgba(255,77,79,.22);}
+  .note { font-size:12px; color:var(--muted); background:var(--panel2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-top:10px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ AI Return Risk Manager</h1>
+  <span class="badge" id="model-badge">Loading model info…</span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="explorer">Transaction Explorer</div>
+  <div class="tab" data-tab="performance">Model Performance</div>
+  <div class="tab" data-tab="business">Business Impact</div>
+</div>
+
+<div class="content">
+
+  <!-- OVERVIEW -->
+  <div id="tab-overview" class="tab-content">
+    <div class="grid" id="overview-cards"></div>
+    <div class="row">
+      <div class="card">
+        <div class="panel-title" style="margin-top:0">Risk Distribution (sample of scored transactions)</div>
+        <canvas id="riskDistChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="panel-title" style="margin-top:0">Confusion Matrix — HELD-OUT TEST SET</div>
+        <div class="cm-grid" id="cm-grid"></div>
+        <div class="note">Computed once on the untouched 20% test split — never used for tuning.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPLORER -->
+  <div id="tab-explorer" class="tab-content hidden">
+    <div class="filters">
+      <select id="f-risk"><option value="">All Risk Levels</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select>
+      <select id="f-category"><option value="">All Categories</option></select>
+      <select id="f-payment"><option value="">All Payment Methods</option></select>
+      <input id="f-minamt" type="number" placeholder="Min amount ₹">
+      <input id="f-maxamt" type="number" placeholder="Max amount ₹">
+    </div>
+    <table>
+      <thead><tr>
+        <th>Transaction ID</th><th>Amount</th><th>Risk Score</th><th>Risk Level</th>
+        <th>Prev. Returns</th><th>Return Rate</th><th>Days to Return</th><th>Action</th>
+      </tr></thead>
+      <tbody id="tx-table-body"></tbody>
+    </table>
+    <div class="note">Showing a representative 250-row demo sample (this dashboard is a static build). The live API's <code>/transactions</code> endpoint serves the full scored dataset.</div>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div id="tab-performance" class="tab-content hidden">
+    <div class="panel-title" style="margin-top:0">HELD-OUT TEST SET — Model Performance</div>
+    <div class="grid" id="perf-cards"></div>
+    <div class="panel-title">Threshold Analysis (tuned on validation data, cost-based)</div>
+    <table>
+      <thead><tr><th>Threshold</th><th>Precision</th><th>Recall</th><th>F1</th><th>False Positives</th><th>False Negatives</th><th>Total Cost (₹)</th></tr></thead>
+      <tbody id="threshold-table-body"></tbody>
+    </table>
+    <div class="note" id="threshold-note"></div>
+  </div>
+
+  <!-- BUSINESS -->
+  <div id="tab-business" class="tab-content hidden">
+    <div class="panel-title" style="margin-top:0">Financial Impact — HELD-OUT TEST SET</div>
+    <div class="grid" id="business-cards"></div>
+    <div class="row">
+      <div class="card">
+        <div class="panel-title" style="margin-top:0">Without Model vs With Model</div>
+        <canvas id="costChart"></canvas>
+      </div>
+      <div class="card">
+        <div class="panel-title" style="margin-top:0">Cost Assumptions</div>
+        <table>
+          <tr><td>False Positive cost</td><td id="fp-cost-assumption"></td></tr>
+          <tr><td>False Negative cost</td><td id="fn-cost-assumption"></td></tr>
+        </table>
+        <div class="note" id="financial-note"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <span class="close-btn" onclick="closeModal()">✕</span>
+    <h3 id="modal-title"></h3>
+    <p id="modal-score"></p>
+    <p style="color:var(--muted); font-size:13px;">Key contributing factors:</p>
+    <ul id="modal-reasons"></ul>
+    <p><b>Recommended action:</b> <span id="modal-action"></span></p>
+  </div>
+</div>
+
+<script>
+const METRICS = __METRICS_JSON__;
+const SAMPLE = __SAMPLE_JSON__;
+
+document.getElementById('model-badge').innerText =
+  `Model: ${METRICS.model_name} · threshold ${METRICS.chosen_threshold} · seed ${METRICS.random_seed}`;
+
+// ---- Tabs ----
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.add('hidden'));
+    t.classList.add('active');
+    document.getElementById('tab-'+t.dataset.tab).classList.remove('hidden');
+  });
+});
+
+// ---- Overview cards ----
+const testPerf = METRICS.held_out_test_performance_chosen_threshold;
+const fin = METRICS.financial_model;
+const highPct = (SAMPLE.filter(r=>r.risk_level==='HIGH').length / SAMPLE.length * 100).toFixed(1);
+
+function card(label, value, sub) {
+  return `<div class="card"><div class="label">${label}</div><div class="value">${value}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+}
+
+document.getElementById('overview-cards').innerHTML = [
+  card('Total Transactions (dataset)', METRICS.data_split.train_rows + METRICS.data_split.validation_rows + METRICS.data_split.test_rows),
+  card('Held-out Test Rows', METRICS.data_split.test_rows, 'never used for training/tuning'),
+  card('High Risk % (sample)', highPct + '%'),
+  card('Precision (test)', (testPerf.precision*100).toFixed(1)+'%'),
+  card('Recall (test)', (testPerf.recall*100).toFixed(1)+'%'),
+  card('F1 (test)', (testPerf.f1*100).toFixed(1)+'%'),
+  card('FP Cost (test)', '₹'+testPerf.fp_cost.toLocaleString('en-IN')),
+  card('FN Cost (test)', '₹'+testPerf.fn_cost.toLocaleString('en-IN')),
+].join('');
+
+// risk distribution chart
+const dist = {LOW:0, MEDIUM:0, HIGH:0};
+SAMPLE.forEach(r => dist[r.risk_level]++);
+new Chart(document.getElementById('riskDistChart'), {
+  type:'doughnut',
+  data:{labels:['LOW','MEDIUM','HIGH'], datasets:[{data:[dist.LOW,dist.MEDIUM,dist.HIGH],
+    backgroundColor:['#34c759','#f5a623','#ff4d4f'], borderWidth:0}]},
+  options:{plugins:{legend:{labels:{color:'#e6e9f0'}}}}
+});
+
+// confusion matrix
+const cm = testPerf.confusion_matrix;
+document.getElementById('cm-grid').innerHTML = `
+  <div class="cm-cell tp"><div class="n">${cm.tp}</div><div class="l">True Positive</div></div>
+  <div class="cm-cell fp"><div class="n">${cm.fp}</div><div class="l">False Positive</div></div>
+  <div class="cm-cell fn"><div class="n">${cm.fn}</div><div class="l">False Negative</div></div>
+  <div class="cm-cell tn"><div class="n">${cm.tn}</div><div class="l">True Negative</div></div>
+`;
+
+// ---- Explorer ----
+const categories = [...new Set(SAMPLE.map(r=>r.product_category))].sort();
+const payments = [...new Set(SAMPLE.map(r=>r.payment_method))].sort();
+document.getElementById('f-category').innerHTML += categories.map(c=>`<option>${c}</option>`).join('');
+document.getElementById('f-payment').innerHTML += payments.map(c=>`<option>${c}</option>`).join('');
+
+function renderTable() {
+  const risk = document.getElementById('f-risk').value;
+  const cat = document.getElementById('f-category').value;
+  const pay = document.getElementById('f-payment').value;
+  const minAmt = parseFloat(document.getElementById('f-minamt').value) || 0;
+  const maxAmt = parseFloat(document.getElementById('f-maxamt').value) || Infinity;
+
+  let rows = SAMPLE.filter(r =>
+    (!risk || r.risk_level===risk) &&
+    (!cat || r.product_category===cat) &&
+    (!pay || r.payment_method===pay) &&
+    r.order_amount >= minAmt && r.order_amount <= maxAmt
+  );
+
+  document.getElementById('tx-table-body').innerHTML = rows.map(r => `
+    <tr onclick='openModal(${JSON.stringify(r).replace(/'/g,"&apos;")})'>
+      <td>${r.transaction_id}</td>
+      <td>₹${r.order_amount.toLocaleString('en-IN')}</td>
+      <td>${r.risk_score}</td>
+      <td><span class="pill ${r.risk_level}">${r.risk_level}</span></td>
+      <td>${r.previous_returns}</td>
+      <td>${(r.return_rate*100).toFixed(0)}%</td>
+      <td>${r.days_to_return ?? '—'}</td>
+      <td>${r.recommended_action}</td>
+    </tr>
+  `).join('');
+}
+['f-risk','f-category','f-payment','f-minamt','f-maxamt'].forEach(id =>
+  document.getElementById(id).addEventListener('input', renderTable));
+renderTable();
+
+function openModal(r) {
+  document.getElementById('modal-title').innerText = r.transaction_id;
+  document.getElementById('modal-score').innerHTML = `Risk Score: <b>${r.risk_score}</b>/100 &nbsp;·&nbsp; Level: <span class="pill ${r.risk_level}">${r.risk_level}</span>`;
+  document.getElementById('modal-reasons').innerHTML = r.reasons.map(x=>`<li>${x}</li>`).join('');
+  document.getElementById('modal-action').innerText = r.recommended_action;
+  document.getElementById('modal-backdrop').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal-backdrop').style.display = 'none'; }
+
+// ---- Performance tab ----
+document.getElementById('perf-cards').innerHTML = [
+  card('Precision', (testPerf.precision*100).toFixed(1)+'%'),
+  card('Recall', (testPerf.recall*100).toFixed(1)+'%'),
+  card('F1 Score', (testPerf.f1*100).toFixed(1)+'%'),
+  card('Accuracy', (testPerf.accuracy*100).toFixed(1)+'%'),
+  card('ROC-AUC', (METRICS.held_out_test_performance_default_threshold_0.5.roc_auc*100).toFixed(1)+'%'),
+  card('False Positive Rate', (testPerf.false_positive_rate*100).toFixed(1)+'%'),
+  card('False Negative Rate', (testPerf.false_negative_rate*100).toFixed(1)+'%'),
+].join('');
+
+document.getElementById('threshold-table-body').innerHTML = METRICS.threshold_analysis_on_validation.map(r => `
+  <tr><td>${r.threshold}</td><td>${(r.precision*100).toFixed(1)}%</td><td>${(r.recall*100).toFixed(1)}%</td>
+  <td>${(r.f1*100).toFixed(1)}%</td><td>${r.false_positives}</td><td>${r.false_negatives}</td>
+  <td>₹${r.total_cost.toLocaleString('en-IN')}</td></tr>
+`).join('');
+document.getElementById('threshold-note').innerText =
+  `Selected threshold = ${METRICS.chosen_threshold} (minimizes total validation cost). This choice was made on the VALIDATION set only — the held-out test set above was scored exactly once, after this choice was locked in.`;
+
+// ---- Business tab ----
+document.getElementById('business-cards').innerHTML = [
+  card('False Positive Cost', '₹'+testPerf.fp_cost.toLocaleString('en-IN'), testPerf.confusion_matrix.fp+' cases × ₹'+fin.fp_cost_per_case_inr),
+  card('False Negative Cost', '₹'+testPerf.fn_cost.toLocaleString('en-IN'), testPerf.confusion_matrix.fn+' cases × ₹'+fin.fn_cost_per_case_inr),
+  card('Total Risk Cost (with model)', '₹'+fin.with_model_total_cost_inr.toLocaleString('en-IN')),
+  card('Cost Without Model', '₹'+fin.without_model_total_cost_inr.toLocaleString('en-IN'), 'if every case were approved with no screening'),
+  card('Estimated Loss Prevented', '₹'+fin.estimated_loss_prevented_inr.toLocaleString('en-IN'), 'on this held-out test set only'),
+].join('');
+
+new Chart(document.getElementById('costChart'), {
+  type:'bar',
+  data:{labels:['Without Model','With Model'],
+    datasets:[{label:'Total Cost (₹, held-out test set)', data:[fin.without_model_total_cost_inr, fin.with_model_total_cost_inr],
+    backgroundColor:['#ff4d4f','#5b8def']}]},
+  options:{plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#e6e9f0'}},y:{ticks:{color:'#e6e9f0'}}}}
+});
+
+document.getElementById('fp-cost-assumption').innerText = '₹'+fin.fp_cost_per_case_inr+' per case (manual verification / customer friction)';
+document.getElementById('fn-cost-assumption').innerText = '₹'+fin.fn_cost_per_case_inr+' per case (average merchant loss from undetected abuse)';
+document.getElementById('financial-note').innerText = fin.note;
+
+</script>
+</body>
+</html>
